@@ -29,7 +29,7 @@ public class GameSurface extends JPanel implements ActionListener {
         setFocusable(true);
         
         try {
-            track = ImageIO.read(getClass().getResourceAsStream("/resources/track2.png"));
+            track = ImageIO.read(getClass().getResourceAsStream("/resources/track3.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }

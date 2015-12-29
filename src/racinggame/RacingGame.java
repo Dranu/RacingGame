@@ -11,7 +11,7 @@ public class RacingGame extends JFrame {
     
     public void initUI() {
         add(new GameSurface());
-        setSize(800, 600);
+        setSize(800, 635);
         setResizable(false);
         setTitle("2D Racing Game");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
