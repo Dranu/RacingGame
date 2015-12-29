@@ -33,7 +33,7 @@ public class Car {
     
     public void initCar() {
         try {
-            img = ImageIO.read(getClass().getResourceAsStream("/resources/square2.png"));
+            img = ImageIO.read(getClass().getResourceAsStream("/resources/car1.png"));
         } catch (IOException e) {
             e.printStackTrace();
         }
