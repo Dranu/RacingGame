@@ -40,7 +40,7 @@ public class Car {
         
         // Set parameters
         this.x = 41;
-        this.y = 141;
+        this.y = 300;
         this.vx = 0;
         this.vy = 0;
         this.drag = 0.9;
@@ -118,6 +118,8 @@ public class Car {
         int rlc = track.getRGB(rl_coords[0], rl_coords[1]);
         
         int tc = new Color(127,127,127).getRGB(); // track color
+        //field color: 0,229, 7
+        //redline color: 229, 11, 0 - need to slow the speed a little bit, maybe to 0.8 times
         
         if (luc!=tc || ruc!=tc || llc!=tc || rlc!=tc) {
             return true;
