@@ -1,0 +1,12 @@
+Game:
+1) Edges of the track (redline)
+2) Checkpoints
+3) Edges of the image
+4) Give every player a different car-image
+5) Rename collisionDetect to terrainDetect
+
+Network:
+1) Disconnecting
+2) How to notify new clients that max players achieved (currently it tries to listen but nothing happens)
+3) Prediction
+4) Collision?
