@@ -10,7 +10,9 @@ public class RacingGame extends JFrame {
     }
     
     public void initUI() {
-        add(new GameSurface());
+        GameSurface gs = new GameSurface();
+        add(gs);
+        new Thread(gs).start();
         setSize(800, 635);
         setResizable(false);
         setTitle("2D Racing Game");

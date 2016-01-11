@@ -9,6 +9,8 @@ import javax.imageio.ImageIO;
 
 public class Car {
     
+    private int id;
+    
     private double x, y; // position of the car
     private double vx, vy; // velocity on each axis
     private double drag; // how fast car slows down
@@ -23,16 +25,16 @@ public class Car {
     
     private BufferedImage img;
     private BufferedImage track;
-    private GameSurface gamesurface;
     
-    Car(GameSurface gamesurface, BufferedImage track) {
-        this.gamesurface = gamesurface;
+    Car(BufferedImage track, int id) {
         this.track = track;
+        this.id = id;
         initCar();
     }
     
     public void initCar() {
         try {
+            // select car image based on id!
             img = ImageIO.read(getClass().getResourceAsStream("/resources/car1.png"));
         } catch (IOException e) {
             e.printStackTrace();
@@ -142,12 +144,32 @@ public class Car {
         return coords;
     }
     
+    public int getID() {
+        return id;
+    }
+    
     public int getX() {
         return (int)Math.floor(x);
     }
     
     public int getY() {
         return (int)Math.floor(y);
+    }
+    
+    public void setID(int id) {
+        this.id = id;
+    }
+    
+    public void setX(double x) {
+        this.x = x;
+    }
+    
+    public void setY(double y) {
+        this.y = y;
+    }
+    
+    public void setAngle(double a) {
+        this.angle = a;
     }
     
     public double getAngle() {
