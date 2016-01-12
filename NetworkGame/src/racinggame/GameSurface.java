@@ -64,13 +64,13 @@ public class GameSurface extends JPanel implements ActionListener {
         Graphics2D g2d = (Graphics2D) g;
         g2d.drawImage(track, 0, 0, null);
         //carlist = ServerThread.getList();
-        //Tänne se listan läpikäynti 
         //x = car.getX();
         //y = car.getY();
         //System.out.println("Render ID: " + id);
         //System.out.println("Game Surface Size: "+ GameSurface.Carlist.size());
         //if (id == 0){
             for(i=0;i<Carlist.size();i++){
+                AffineTransform old = g2d.getTransform();
                 String[] CarlistArray = Carlist.get(i);
                 x =Integer.parseInt(CarlistArray[2]);
                 y =Integer.parseInt(CarlistArray[3]);
@@ -84,7 +84,8 @@ public class GameSurface extends JPanel implements ActionListener {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
-                g2d.drawImage(carImage, x, y, null);       
+                g2d.drawImage(carImage, x, y, null);
+                g2d.setTransform(old);  //fixes the rotation issue     
                 Toolkit.getDefaultToolkit().sync();        
             }
        /* }
