@@ -8,6 +8,6 @@ Game:
 Network:
 1) Disconnecting
 2) How to notify new clients that max players achieved (currently it tries to listen but nothing happens)
-3) Prediction
-4) Collision?
+3) Prediction - everyone
+4) Collision? - TBD
 5) Combine chat and game
