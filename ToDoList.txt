@@ -6,7 +6,8 @@ Game:
 5) Rename collisionDetect to terrainDetect - anyone
 
 Network:
-1) Disconnecting
+1) Server disconnects -> close game window and receive DC message
+2) Client disconnects -> should the car still be drawn or erased? 
 2) How to notify new clients that max players achieved (currently it tries to listen but nothing happens)
 3) Prediction - everyone
 4) Collision? - TBD
