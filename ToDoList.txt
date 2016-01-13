@@ -1,14 +1,14 @@
 Game:
-1) Edges of the track (redline) - JM
-2) Checkpoints - JM
-3) Edges of the image (SOLVED, just needs to be added to the game)  - JS
-4) Give every player a different car-image - JK (?)
-5) Rename collisionDetect to terrainDetect - anyone
+1) JM - Edges of the track (redline)
+2) JM - Checkpoints 
+3) JS - Edges of the image (SOLVED, just needs to be added to the game)
+4) JK - Give every player a different car-image 
+5) Anyone - Rename collisionDetect to terrainDetect  
 
 Network:
 1) Server disconnects -> close game window and receive DC message
 2) Client disconnects -> should the car still be drawn or erased? 
 2) How to notify new clients that max players achieved (currently it tries to listen but nothing happens)
-3) Prediction - everyone
-4) Collision? - TBD
-5) Combine chat and game
+3) Everyone - Prediction
+4) TBD - Collision?
+5) Everyone - Combine chat and game
