@@ -3,21 +3,24 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
+/*Source: https://www.daniweb.com/programming/software-development/threads/392710/basic-udp-chat-system*/
 package racinggame;
 import java.util.Scanner;
 import java.io.*;
 import java.net.*;
 
 public class ChatClient{
-    
+    private int clientport = 7777;
+    private String host = "localhost";
     
     public void run(){
         try {
-            Socket sock = new Socket("localhost",4444);
-            SendThread sendThread = new SendThread(sock);
-            Thread thread = new Thread(sendThread);thread.start();
-            ReceiveThread receiveThread = new ReceiveThread(sock);
-            Thread thread2 =new Thread(receiveThread);thread2.start();
+            InetAddress ia = InetAddress.getByName(host);
+ 
+            SendThread sender = new SendThread(ia, clientport);
+            sender.start();
+            ReceiveThread receiver = new ReceiveThread(sender.getSocket());
+            receiver.start();
         }catch (Exception e) {System.out.println(e.getMessage());
         
         }
