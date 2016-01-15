@@ -1,9 +1,7 @@
 Game:
 1) JM - Edges of the track (redline)
 2) JM - Checkpoints 
-3) JS - Edges of the image (SOLVED, just needs to be added to the game)
-4) JK - Give every player a different car-image 
-5) Anyone - Rename collisionDetect to terrainDetect  
+4) JK - Give every player a different car-image
 
 Network:
 1) JK - Server disconnects -> close game window and receive DC message
