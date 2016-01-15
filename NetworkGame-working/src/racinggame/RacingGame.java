@@ -13,7 +13,7 @@ public class RacingGame extends JFrame {
         GameSurface gs = new GameSurface();
         add(gs);
         new Thread(gs).start();
-        setSize(800, 635);
+        setSize(806, 629);
         setResizable(false);
         setTitle("2D Racing Game");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);

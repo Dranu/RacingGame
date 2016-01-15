@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.Arrays;
 
 import javax.imageio.ImageIO;
 
@@ -80,15 +81,31 @@ public class Car {
         y += vy;
         angle += angVel;
         
-        if (collisiondetect(getX(), getY()) == false) {
-            vx *= drag;
-            vy *= drag;
-            angVel *= angDrag;
-        }
-        else {
-            vx *= drag*0.5;
-            vy *= drag*0.5;
-            angVel *= angDrag*0.5;
+        switch (terraindetect(getX(), getY())) {
+            case -1:
+                // on track image border
+                x -= vx;
+                y -= vy;
+                angle -= angVel;
+                vx = 0;
+                vy = 0;
+                angVel = 0;
+                break;
+            case 0:
+                // on track
+                vx *= drag;
+                vy *= drag;
+                angVel *= angDrag;
+                break;
+            case 1:
+                // on redline
+                break;
+            case 2:
+                // on grass
+                vx *= drag*0.5;
+                vy *= drag*0.5;
+                angVel *= angDrag*0.5;
+                break;
         }
         
         // reset the angle if needed
@@ -97,7 +114,7 @@ public class Car {
         
     }
     
-    public boolean collisiondetect(int X, int Y) {
+    public int terraindetect(int X, int Y) {
         
         // The angle the image is drawn 
         double imageAngle = angle + Math.PI/2;
@@ -113,6 +130,17 @@ public class Car {
         int[] ll_coords = getCorner(X,Y+h,cx,cy,imageAngle);
         int[] rl_coords = getCorner(X+w,Y+h,cx,cy,imageAngle);
         
+        // Check for track image borders
+        int [] xcoords = {lu_coords[0], ru_coords[0], ll_coords[0], rl_coords[0]};
+        int [] ycoords = {lu_coords[1], ru_coords[1], ll_coords[1], rl_coords[1]};
+        for (int i=0; i<4; i++) {
+            if (xcoords[i] < 0 || xcoords[i] >= 800 ||
+                ycoords[i] < 0 || ycoords[i] >= 600) {
+                // coordinates out of bounds
+                return -1;
+            }
+        }
+        
         // Get colors of the game surface for each corner coordinate
         int luc = track.getRGB(lu_coords[0], lu_coords[1]);
         int ruc = track.getRGB(ru_coords[0], ru_coords[1]);
@@ -124,10 +152,13 @@ public class Car {
         //redline color: 229, 11, 0 - need to slow the speed a little bit, maybe to 0.8 times
         
         if (luc!=tc || ruc!=tc || llc!=tc || rlc!=tc) {
-            return true;
+            // on grass (may want to change if-clause to check for grass color)
+            return 2;
         }
+        // add redline detection here
         else {
-            return false;
+            // on track
+            return 0;
         }
     }
     
