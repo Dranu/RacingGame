@@ -1,7 +1,5 @@
 Game:
-1) JM - Edges of the track (redline)
-2) JM - Checkpoints 
-4) JK - Give every player a different car-image
+1) JK - Give every player a different car-image
 
 Network:
 1) JK - Server disconnects -> close game window and receive DC message
