@@ -167,7 +167,7 @@ public class GameSurface extends JPanel implements Runnable {
         g2d.rotate(a, x+w/2, y+h/2);
         g2d.drawImage(car.getImage(), x, y, null);
         g2d.setTransform(old); // reset old rotation
-        
+        g2d.drawString("LAP " + car.getLap(),50,20); //Display the current lap
         // Render cars in carList
         // carList is also accessed by InputThread so we need to synchronize
         synchronized (carList) {
