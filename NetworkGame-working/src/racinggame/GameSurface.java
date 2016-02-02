@@ -124,6 +124,10 @@ public class GameSurface extends JPanel implements Runnable {
             String[] dataArray = data.split(":");
             // react only to login response, ignore all other packets for now
             if (dataArray[0].equals("00")) {
+                if(dataArray[1].equals("-1")){
+                    System.out.println("Server refused connection");
+                    System.exit(1);
+                }
                 id = Integer.parseInt(dataArray[1]);
                 break;
             }
@@ -218,6 +222,7 @@ class InputThread extends Thread {
         
         while (true) {
             try {
+                socket.setSoTimeout(20000); //Timeout for disconnecting, 20sec, might think something else?
                 socket.receive(packet);
                 data = new String(packet.getData(), 0, packet.getLength());
                 //System.out.println(data);
@@ -235,7 +240,7 @@ class InputThread extends Thread {
                             boolean added = false;
                             for (Car car : GameSurface.carList) {
                                 if (playerid < car.getID()) {
-                                    GameSurface.carList.add(car.getID(), c);
+                                    GameSurface.carList.add(car.getID(), c); //Got an error from this with 4th player
                                     added = true;
                                     break;
                                 }

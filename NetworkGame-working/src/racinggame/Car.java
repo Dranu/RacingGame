@@ -53,7 +53,7 @@ public class Car {
     public void initCar() {
         try {
             // select car image based on id!
-            img = ImageIO.read(getClass().getResourceAsStream("/resources/car1.png"));
+            img = ImageIO.read(getClass().getResourceAsStream("/resources/car"+(this.id+1)+".png"));
         } catch (IOException e) {
             e.printStackTrace();
         }

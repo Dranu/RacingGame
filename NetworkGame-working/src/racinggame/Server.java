@@ -54,14 +54,21 @@ class ServerThread extends Thread {
         byte[] sendbuffer = new byte[256];
         String data = new String(packet.getData(), 0, packet.getLength());
         String[] dataArray = data.split(":");
+        String response;
         
         if (dataArray[0].equals("00")) { // Login packet
             if (idcounter == 4) { // max 4 players
+                response = "00:-1";
+                sendbuffer = response.getBytes();
+                packet = new DatagramPacket(sendbuffer, sendbuffer.length, address, port);
+                socket.send(packet);
                 return;
+            } else {
+                response = "00:" + idcounter;
             }
             addresses.add(address);
             ports.add(port);
-            String response = "00:" + idcounter;
+            //String response = "00:" + idcounter;
             // Create new car for the car list
             BufferedImage track = null;
             try {
@@ -86,7 +93,7 @@ class ServerThread extends Thread {
             c.setAngle(Double.parseDouble(dataArray[4]));
             
             // Send packet to all clients
-            String response = data;
+            response = data;
             sendbuffer = response.getBytes();
             int i = 0;
             for (InetAddress a : addresses) {
