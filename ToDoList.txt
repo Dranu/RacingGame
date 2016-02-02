@@ -1,25 +1,8 @@
-Game:
-1) JK - Give every player a different car-image
-
 Network:
-1) JK - Server disconnects -> close game window and receive DC message
-DatagramSocket has a method called connect(), which makes socket receive
-packets only from specified address/port and thus automatically makes it
-possible for socket to recognize if it still exists in that specific server 
-end when sending and receiving packets (and then resulting in an exception
-if it doesn't). 
-
-This seems more realiable solution than using timeouts because there might
-be a long moment in the chat phase where nobody is saying anything and 
-thus clients would think that server has crashed/quit even when it's not.
-
-
-
-2) JM - Client disconnects -> should the car still be drawn or erased? 
-3) JK - How to notify new clients that max players achieved (currently it tries to listen but nothing happens)
-4) TBD - Collision?
-5) Everyone - Combine chat and game
-6) Everyone - Prediction: 
+1) JM - Client disconnects -> should the car still be drawn or erased? 
+2) TBD - Collision?
+3) Everyone - Combine chat and game
+4) Everyone - Prediction: 
 "When we send input-packet to server we could add timestamp on it to be later added on server's coordinate/angle-packet for client. 
 Then we could have a list on client side where we add the result of the prediction with that timestamp.
 
