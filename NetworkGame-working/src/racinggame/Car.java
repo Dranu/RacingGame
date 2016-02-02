@@ -4,7 +4,11 @@ import java.awt.Color;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import javax.imageio.ImageIO;
 
@@ -24,6 +28,10 @@ public class Car {
     private int throttle; // 1 = forward , 0 = off, -1 = reverse
     private int steering; // 1 = right, 0 = center, -1 = left
     
+    private List<Color> checkpointList = new ArrayList(); //Make an arraylist for the checkpoints
+    private int checkpoint;
+    private int lap;
+    
     private BufferedImage img;
     private BufferedImage track;
     
@@ -36,14 +44,16 @@ public class Car {
     public void initCar() {
         try {
             // select car image based on id!
-            img = ImageIO.read(getClass().getResourceAsStream("/resources/car1.png"));
+            img = ImageIO.read(getClass().getResourceAsStream("/resources/car"+(this.id+1)+".png"));
         } catch (IOException e) {
             e.printStackTrace();
         }
         
         // Set parameters
-        this.x = 41;
-        this.y = 300;
+        int[][] startcoords = {{22,259},{44,259},{22,286},{44,286}};
+        this.x = startcoords[id][0];
+        this.y = startcoords[id][1];
+        
         this.vx = 0;
         this.vy = 0;
         this.drag = 0.9;
@@ -55,6 +65,20 @@ public class Car {
         
         this.throttle = 0;
         this.steering = 0;
+        
+        this.lap = 1;
+        //Add the checkpoints to the arraylist
+        this.checkpointList.add(new Color(255,255,255));// finishline
+        this.checkpointList.add(new Color(126,126,126));// *1) 126,126,126 -
+        this.checkpointList.add(new Color(127,126,126));// *2) 127,126,126 -
+        this.checkpointList.add(new Color(128,126,126));// *3) 128,126,126 -
+        this.checkpointList.add(new Color(126,127,126));// *4) 126,127,126 
+        this.checkpointList.add(new Color(126,128,126));// *5) 126,128,126
+        this.checkpointList.add(new Color(126,126,127));// *6) 126,126,127
+        this.checkpointList.add(new Color(126,126,128));// *7) 126,126,128
+        this.checkpointList.add(new Color(128,128,128));// *8) 128,128,128
+        this.checkpointList.add(new Color(126,127,128));// *9) 126,127,128
+        this.checkpoint = 0;
     }
     
     public void move() {
@@ -99,12 +123,15 @@ public class Car {
                 break;
             case 1:
                 // on redline
+                vx *= drag*0.9;
+                vy *= drag*0.9;
+                angVel *= angDrag*0.9;
                 break;
             case 2:
                 // on grass
-                vx *= drag*0.5;
-                vy *= drag*0.5;
-                angVel *= angDrag*0.5;
+                vx *= drag*0.6;
+                vy *= drag*0.6;
+                angVel *= angDrag*0.6;
                 break;
         }
         
@@ -130,6 +157,7 @@ public class Car {
         int[] ll_coords = getCorner(X,Y+h,cx,cy,imageAngle);
         int[] rl_coords = getCorner(X+w,Y+h,cx,cy,imageAngle);
         
+        
         // Check for track image borders
         int [] xcoords = {lu_coords[0], ru_coords[0], ll_coords[0], rl_coords[0]};
         int [] ycoords = {lu_coords[1], ru_coords[1], ll_coords[1], rl_coords[1]};
@@ -147,19 +175,39 @@ public class Car {
         int llc = track.getRGB(ll_coords[0], ll_coords[1]);
         int rlc = track.getRGB(rl_coords[0], rl_coords[1]);
         
-        int tc = new Color(127,127,127).getRGB(); // track color
-        //field color: 0,229, 7
-        //redline color: 229, 11, 0 - need to slow the speed a little bit, maybe to 0.8 times
+        //int tc = new Color(127,127,127).getRGB(); // track color
+        //http://stackoverflow.com/questions/7604814/best-way-to-format-multiple-or-conditions-in-an-if-statement-java
+        Set<Integer> corners = new HashSet<Integer>(Arrays.asList(luc,ruc,llc,rlc));
+        int field = new Color(0,229,7).getRGB();      //field color: 0,229, 7
+        int redline = new Color(229,11,0).getRGB(); //redline color: 229, 11, 0 
+     
+        if(checkpoint == 9){ //Last checkpoint cleared, next should be finishline
+            if ( corners.contains(checkpointList.get(0).getRGB() )){
+                checkpoint = 0;
+                System.out.println(checkpoint + ". Checkpoint: " + checkpointList.get(checkpoint).getRGB());
+                lap++;
+            }
+        }
+        else if ( corners.contains(checkpointList.get(checkpoint + 1).getRGB()) ) {
+            checkpoint++;
+            System.out.println(checkpoint + ". Checkpoint: " + checkpointList.get(checkpoint).getRGB());
+        }
         
-        if (luc!=tc || ruc!=tc || llc!=tc || rlc!=tc) {
+        if (corners.contains(field)) {//(luc==field || ruc==field || llc==field || rlc==field ){
             // on grass (may want to change if-clause to check for grass color)
             return 2;
         }
-        // add redline detection here
+        else if(corners.contains(redline)){//(luc==redline || ruc==redline || llc==redline || rlc==redline){
+            return 1;
+        }
         else {
             // on track
             return 0;
         }
+    }
+    
+    public int getLap(){
+        return lap;
     }
     
     public int[] getCorner(int X, int Y, int CX, int CY, double Angle) {

@@ -12,7 +12,9 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
 import javax.imageio.ImageIO;
@@ -24,7 +26,8 @@ public class GameSurface extends JPanel implements Runnable {
     private DatagramSocket socket;
     private InetAddress address;
     public static BufferedImage track;
-    public static List<Car> carList = new ArrayList();
+    public static Map<Integer,Car> carList = new HashMap();
+    public static Object ready = new Object(); // flag for thread communication
     
     GameSurface() {
         int id = -1;
@@ -39,12 +42,27 @@ public class GameSurface extends JPanel implements Runnable {
         initWindow();
     }
     
+    public int getCarID() {
+        return car.getID();
+    }
+    
     @Override
     public void run() {
         
         // Start receiving input from server in another thread
         new InputThread(socket).start();
+        new ChatThread(socket, car.getID(), address).start();
         
+        // wait if we are not the last person joined i.e. id = 3
+        if (car.getID() < 3) {
+            synchronized (ready) {
+                try {
+                    ready.wait();
+                } catch (InterruptedException ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
         
         /* THE GAMELOOP */
         // Note! This section needs to be modified for client prediction
@@ -66,7 +84,7 @@ public class GameSurface extends JPanel implements Runnable {
             int x = car.getX();
             int y = car.getY();
             double a = car.getAngle();
-            
+
             // 2) Create and send coordinate/angle packet to server
             byte[] sendbuffer = new byte[256];
             String data = "01:" + Integer.toString(my_id) + ":" + Integer.toString(x) 
@@ -76,7 +94,9 @@ public class GameSurface extends JPanel implements Runnable {
             try {
                 socket.send(packet);
             } catch (IOException e) {
-                e.printStackTrace();
+                //e.printStackTrace();
+                System.out.println("Lost connection to server.");
+                System.exit(0);
             }
             
             // 3) Move our car
@@ -104,6 +124,9 @@ public class GameSurface extends JPanel implements Runnable {
         byte[] sendbuffer = new byte[256];
         address = InetAddress.getByName("localhost"); // Set host IP here
         
+        // Bind to specific host to detect socket state during send/receive
+        socket.connect(address, 7777);
+        
         // Create login packet
         /*Scanner sc = new Scanner(System.in);
         System.out.print("What is your name?: ");
@@ -124,6 +147,10 @@ public class GameSurface extends JPanel implements Runnable {
             String[] dataArray = data.split(":");
             // react only to login response, ignore all other packets for now
             if (dataArray[0].equals("00")) {
+                if(dataArray[1].equals("-1")){
+                    System.out.println("Server refused connection");
+                    System.exit(0);
+                }
                 id = Integer.parseInt(dataArray[1]);
                 break;
             }
@@ -167,11 +194,11 @@ public class GameSurface extends JPanel implements Runnable {
         g2d.rotate(a, x+w/2, y+h/2);
         g2d.drawImage(car.getImage(), x, y, null);
         g2d.setTransform(old); // reset old rotation
-        
+        g2d.drawString("LAP " + car.getLap(),50,20); //Display the current lap
         // Render cars in carList
         // carList is also accessed by InputThread so we need to synchronize
         synchronized (carList) {
-            for (Car c : carList) {
+            for (Car c : carList.values()) {
                 if (c.getID() != car.getID()) { // DO NOT RE-RENDER OUR CAR!
                     x = c.getX();
                     y = c.getY();
@@ -225,22 +252,11 @@ class InputThread extends Thread {
                 if (dataArray[0].equals("01")) { // coordinate/angle packet
                     synchronized(GameSurface.carList) {
                         int playerid = Integer.parseInt(dataArray[1]);
-                        Car c = null;
-                        try {
-                            c = GameSurface.carList.get(playerid);
-                        } catch (IndexOutOfBoundsException e) {
-                            // car not found on list --> create new
+                        Car c = GameSurface.carList.get(playerid);
+                        if (c == null) {
+                            // not found --> create new
                             c = new Car(GameSurface.track, playerid);
-                            // Add new car to correct location on the list
-                            boolean added = false;
-                            for (Car car : GameSurface.carList) {
-                                if (playerid < car.getID()) {
-                                    GameSurface.carList.add(car.getID(), c);
-                                    added = true;
-                                    break;
-                                }
-                            }
-                            if (!added) GameSurface.carList.add(c);
+                            GameSurface.carList.put(playerid, c);
                         }
                         // set new variable values for that player
                         c.setX(Double.parseDouble(dataArray[2]));
@@ -248,12 +264,55 @@ class InputThread extends Thread {
                         c.setAngle(Double.parseDouble(dataArray[4]));
                     }
                 }
+                else if (dataArray[0].equals("02")) { // chat message packet
+                    int senderID = Integer.parseInt(dataArray[1])+1;
+                    System.out.println("Player " + senderID + ": " + dataArray[2]);
+                }
+                else if (dataArray[0].equals("03")) { // start game packet
+                    synchronized (GameSurface.ready) {
+                        GameSurface.ready.notifyAll();
+                    }
+                }
                 // reset packet length
                 packet.setLength(receivebuffer.length);
             } catch (IOException e) {
-                e.printStackTrace();
+                //e.printStackTrace();
                 socket.close();
                 break;
+            }
+        }
+    }
+}
+
+class ChatThread extends Thread {
+    
+    private DatagramSocket socket;
+    private String data;
+    private Scanner sc;
+    private int playerid;
+    byte[] sendbuffer = new byte[256];
+    private InetAddress address;
+    
+    public ChatThread(DatagramSocket s, int id, InetAddress a) {
+        this.socket = s;
+        this.sc = new Scanner(System.in);
+        this.playerid = id;
+        this.address = a;
+    }
+    
+    @Override
+    public void run() {
+        while (true) {
+            String msg = sc.nextLine();
+            // check message length?
+            String data = "02:" + playerid + ":" + msg;
+            sendbuffer = data.getBytes();
+            DatagramPacket packet = new DatagramPacket(sendbuffer, sendbuffer.length, address, 7777);
+            try {
+                socket.send(packet);
+            } catch (IOException ex) {
+                //ex.printStackTrace();
+                System.out.println("Chat has been terminated.");
             }
         }
     }

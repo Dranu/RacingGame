@@ -1,15 +1,8 @@
-Game:
-1) JM - Edges of the track (redline)
-2) JM - Checkpoints 
-4) JK - Give every player a different car-image
-
 Network:
-1) JK - Server disconnects -> close game window and receive DC message
-2) JM - Client disconnects -> should the car still be drawn or erased? 
-3) JK - How to notify new clients that max players achieved (currently it tries to listen but nothing happens)
-4) TBD - Collision?
-5) Everyone - Combine chat and game
-6) Everyone - Prediction: 
+1) JM - Client disconnects -> should the car still be drawn or erased? 
+2) TBD - Collision?
+3) Everyone - Combine chat and game
+4) Everyone - Prediction: 
 "When we send input-packet to server we could add timestamp on it to be later added on server's coordinate/angle-packet for client. 
 Then we could have a list on client side where we add the result of the prediction with that timestamp.
 
