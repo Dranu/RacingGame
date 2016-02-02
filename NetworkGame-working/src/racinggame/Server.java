@@ -37,7 +37,7 @@ class ServerThread extends Thread {
         while(true) {
             try {
                 socket.receive(packet); // Wait for packets
-                System.out.println("Packet from: " + packet.getAddress());
+                //System.out.println("Packet from: " + packet.getAddress());
                 handlePacket(packet); // Packet caught --> figure out response
                 packet.setLength(receivebuffer.length); // Reset length of packet
             } catch (IOException e) {
@@ -68,7 +68,7 @@ class ServerThread extends Thread {
             }
             addresses.add(address);
             ports.add(port);
-            //String response = "00:" + idcounter;
+
             // Create new car for the car list
             BufferedImage track = null;
             try {
@@ -79,10 +79,29 @@ class ServerThread extends Thread {
             Car c = new Car(track, idcounter);
             carList.add(c);
             idcounter++;
+            
             // Send player's id as response
             sendbuffer = response.getBytes();
             packet = new DatagramPacket(sendbuffer, sendbuffer.length, address, port);
             socket.send(packet);
+            
+            // If we have 4 players --> send start message to players
+            if (idcounter == 4) {
+                response = "03:start";
+                sendbuffer = response.getBytes();
+                int i = 0;
+                for (InetAddress a : addresses) {
+                    if (a.equals(address) && (ports.get(i) == port)) { // don't send to last joined player
+                        i++;
+                    }
+                    else {
+                        //System.out.println("Sending start");
+                        packet = new DatagramPacket(sendbuffer, sendbuffer.length, a, ports.get(i));
+                        socket.send(packet);
+                        i++;
+                    }
+                }
+            }
         }
         else if (dataArray[0].equals("01")) { // Coordinate/angle packet
             // Update server's game state (this section not needed until client predicition)
@@ -93,6 +112,16 @@ class ServerThread extends Thread {
             c.setAngle(Double.parseDouble(dataArray[4]));
             
             // Send packet to all clients
+            response = data;
+            sendbuffer = response.getBytes();
+            int i = 0;
+            for (InetAddress a : addresses) {
+                packet = new DatagramPacket(sendbuffer, sendbuffer.length, a, ports.get(i));
+                socket.send(packet);
+                i++;
+            }
+        }
+        else if (dataArray[0].equals("02")) { // Chat message packet
             response = data;
             sendbuffer = response.getBytes();
             int i = 0;

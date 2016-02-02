@@ -25,24 +25,15 @@ public class Car {
     private double power; // how fast car can accelerate
     private double turnSpeed; // how fast to turn
     
-    
     private int throttle; // 1 = forward , 0 = off, -1 = reverse
     private int steering; // 1 = right, 0 = center, -1 = left
     
-    ArrayList<Color> checkpointList = new ArrayList<Color>(); //Make an arraylist for the checkpoints
-    
-    
-    private int prevCheck;
-    private int curCheck;
-    private int nextCheck;
+    private List<Color> checkpointList = new ArrayList(); //Make an arraylist for the checkpoints
     private int checkpoint;
     private int lap;
     
     private BufferedImage img;
     private BufferedImage track;
-    
-    
-    
     
     Car(BufferedImage track, int id) {
         this.track = track;
@@ -59,8 +50,10 @@ public class Car {
         }
         
         // Set parameters
-        this.x = 41;
-        this.y = 300;
+        int[][] startcoords = {{22,259},{44,259},{22,286},{44,286}};
+        this.x = startcoords[id][0];
+        this.y = startcoords[id][1];
+        
         this.vx = 0;
         this.vy = 0;
         this.drag = 0.9;
@@ -73,12 +66,9 @@ public class Car {
         this.throttle = 0;
         this.steering = 0;
         
-        this.prevCheck = 0;
-        this.curCheck = 0;
-        this.nextCheck = 0;
         this.lap = 1;
         //Add the checkpoints to the arraylist
-        this.checkpointList.add(new Color(255,255,255));//finishline
+        this.checkpointList.add(new Color(255,255,255));// finishline
         this.checkpointList.add(new Color(126,126,126));// *1) 126,126,126 -
         this.checkpointList.add(new Color(127,126,126));// *2) 127,126,126 -
         this.checkpointList.add(new Color(128,126,126));// *3) 128,126,126 -
@@ -89,8 +79,6 @@ public class Car {
         this.checkpointList.add(new Color(128,128,128));// *8) 128,128,128
         this.checkpointList.add(new Color(126,127,128));// *9) 126,127,128
         this.checkpoint = 0;
-    
-        
     }
     
     public void move() {
@@ -204,8 +192,6 @@ public class Car {
             checkpoint++;
             System.out.println(checkpoint + ". Checkpoint: " + checkpointList.get(checkpoint).getRGB());
         }
-
-        
         
         if (corners.contains(field)) {//(luc==field || ruc==field || llc==field || rlc==field ){
             // on grass (may want to change if-clause to check for grass color)
@@ -219,10 +205,6 @@ public class Car {
             return 0;
         }
     }
-    
-    
-
-    
     
     public int getLap(){
         return lap;
