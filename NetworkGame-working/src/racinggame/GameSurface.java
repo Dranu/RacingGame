@@ -28,7 +28,12 @@ public class GameSurface extends JPanel implements Runnable {
     public static Object ready = new Object(); // flag for thread communication
     private long millis;
     private Prediction predict;
-
+    private double newx = 0;
+    private double newy = 0;
+    private double newa = 0;
+    
+    
+    public static boolean gameover = false;
     
     GameSurface() {
         int id = -1;
@@ -43,6 +48,14 @@ public class GameSurface extends JPanel implements Runnable {
         predict = new Prediction(); //We initialize a prediction object for this gamesurface / car
         initWindow();
     }
+    
+ 
+    public static synchronized boolean getGameover() {
+        return gameover;
+    }
+    
+    
+    
     
     public int getCarID() {
         return car.getID();
@@ -82,7 +95,10 @@ public class GameSurface extends JPanel implements Runnable {
                 7-2) Iterate through inputs and recalculate current position
         */   
         while (true) {
-            
+            if (getGameover() == true) {
+                System.out.println("Game over!");
+                break;
+            }
             // 1) Get inputs
             int my_id = car.getID();
             int steer = car.getSteering();
@@ -111,7 +127,8 @@ public class GameSurface extends JPanel implements Runnable {
             DatagramPacket packet = new DatagramPacket(sendbuffer, sendbuffer.length, address, 7777);
             
             Random randomGenerator = new Random();
-
+            int randomInt = randomGenerator.nextInt(100);
+            if(randomInt < 33){
             try {
                 socket.send(packet);
             } catch (IOException e) {
@@ -119,7 +136,7 @@ public class GameSurface extends JPanel implements Runnable {
                 System.out.println("Lost connection to server.");
                 System.exit(0);
             }
-
+            }
 
             // 4) Render the scene
             repaint();
@@ -128,9 +145,9 @@ public class GameSurface extends JPanel implements Runnable {
                 Thread.sleep(10);
             } catch (InterruptedException ex) {
                 ex.printStackTrace();
-            }
-            
+            }   
         }
+        System.exit(0);
     }
     
     @Override
@@ -183,37 +200,114 @@ public class GameSurface extends JPanel implements Runnable {
                         else //7) Fix position if needed
                         {
                             //7-1) Set correct coordinates from the server to that point in the past
-                            car.setX(c.getX());
-                            car.setY(c.getY());
-                            car.setAngle(c.getAngle());
+                           // car.setX(c.getX());
+                           // car.setY(c.getY());
+                           // car.setAngle(c.getAngle());
                             //7-2) Iterate through inputs and recalculate current position
-                            long startTime = predict.getNextTime(c.getTimestamp()); //Get the next timestamp from the timestamp we just got
-                            while(startTime < car.getTimestamp()){
+                            long startTime = c.getTimestamp();//predict.getNextTime(c.getTimestamp()); //Get the next timestamp from the timestamp we just got
+                            newx = c.getX();
+                            newy = c.getY();
+                            newa = c.getAngle();
+                            do{
+                                
+                                startTime = predict.getNextTime(startTime);
                                 dataArray = predict.getInput(startTime).split(":"); 
                                 //Recalculate the coords with the steering and throttle
                                 int steer = (Integer.parseInt(dataArray[3]));
                                 int throt = (Integer.parseInt(dataArray[4]));
-                                car.move(steer, throt);
-                                int newx = car.getX();
-                                int newy = car.getY();
-                                double newa = car.getAngle();
                                 
+                                recalcMove(steer,throt);
+                                                       
                                 //Add the new inputs to hash, replacing the old values
                                 predict.addHashInput(startTime,(Double.toString(newa)
-                                    + ":" + Integer.toString(newx)
-                                    + ":" + Integer.toString(newy) 
+                                    + ":" + Integer.toString((int)newx)
+                                    + ":" + Integer.toString((int)newy) 
                                     + ":" + dataArray[3] 
                                     + ":" + dataArray[4]));
                                     
-                                startTime = predict.getNextTime(startTime); //Get the next time to recalculate
-                            }                         
-                        }
+                                //startTime = predict.getNextTime(startTime); //Get the next time to recalculate
+                                
+                                
+                            }while(startTime < car.getTimestamp());
+  
+                            car.setX(newx);
+                            car.setY(newy);
+                            car.setAngle(newa);
+                          
+                        } 
                     } //else {System.out.println(c.getTimestamp());} //Should never reach this            
                 }
             }
         }
         Toolkit.getDefaultToolkit().sync();
     }
+    
+    
+    public void recalcMove(int steer, int throt){
+        double vx = 0;
+        double vy = 0;
+        double drag = 0.9;
+        double angle = -Math.PI/2;
+        double angVel = 0;
+        double angDrag = 0.9;
+        double power = 0.2;
+        double turnSpeed = 0.0087;
+
+
+        if (throt != 0) {
+            if (throt == 1) { // forward
+                vx += Math.cos(angle)*power;
+                vy += Math.sin(angle)*power;
+            }
+            if (throt == -1) { // reverse
+                vx -= Math.cos(angle)*power*0.5;
+                vy -= Math.sin(angle)*power*0.5;
+            }
+            if (steer == -1) { // left
+                angVel -= turnSpeed;
+            }
+            if (steer == 1) { // right
+                angVel += turnSpeed;
+            }
+        }
+
+        // Update position
+        newx += vx;
+        newy += vy;
+        newa += angVel;
+
+        switch (car.terraindetect(((int)newx), ((int)newy))) {
+            case -1:
+                // on track image border
+//                 x -= vx;
+//                y -= vy;
+                angle -= angVel;
+                vx = 0;
+                vy = 0;
+                angVel = 0;
+                break;
+            case 0:
+                // on track
+                vx *= drag;
+                vy *= drag;
+                angVel *= angDrag;
+                break;
+            case 1:
+                // on redline
+                vx *= drag*0.9;
+                vy *= drag*0.9;
+                angVel *= angDrag*0.9;
+                break;
+            case 2:
+                // on grass
+                vx *= drag*0.6;
+                vy *= drag*0.6;
+                angVel *= angDrag*0.6;
+                break;
+        }
+    
+    }
+    
     
     private class TAdapter extends KeyAdapter {
         
@@ -236,7 +330,7 @@ public class GameSurface extends JPanel implements Runnable {
         System.out.println("Creating socket to listen to port " + port);
         socket = new DatagramSocket(port);
         byte[] sendbuffer = new byte[256];
-        address = InetAddress.getByName("localhost"); // Set host IP here
+        address = InetAddress.getByName("80.221.247.156"); // Set host IP here
         
         // Bind to specific host to detect socket state during send/receive
         socket.connect(address, 7777);
@@ -305,6 +399,7 @@ class InputThread extends Thread {
     }
     
     @Override
+    @SuppressWarnings("empty-statement")
     public void run() {
         byte[] receivebuffer = new byte[256];
         DatagramPacket packet = new DatagramPacket(receivebuffer, receivebuffer.length);
@@ -342,6 +437,10 @@ class InputThread extends Thread {
                     synchronized (GameSurface.ready) {
                         GameSurface.ready.notifyAll();
                     }
+                }
+                else if (dataArray[0].equals("04")){
+                    //GameSurface.setGameover();
+                    GameSurface.gameover = true;
                 }
                 // reset packet length
                 packet.setLength(receivebuffer.length);

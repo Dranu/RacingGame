@@ -112,9 +112,13 @@ class ServerThread extends Thread {
             c.setThrottle(Integer.parseInt(dataArray[3]));
             //Calculate the position of the car
             c.move(-5,-5); //With -5,-5 values the move-function uses car's own throttle and steering
-            data = "01:" + Integer.toString(c.getID()) + ":" + Integer.toString(c.getX()) 
+            if (c.getLap() == 2)
+                data= "04:"+c.getID();
+            else{
+                data = "01:" + Integer.toString(c.getID()) + ":" + Integer.toString(c.getX()) 
                     + ":" + Integer.toString(c.getY()) + ":" + Double.toString(c.getAngle()) + ":" + dataArray[7];
-            // Send the calculated position to all clients
+                // Send the calculated position to all clients
+            }
             response = data;
             sendbuffer = response.getBytes();
             int i = 0;
