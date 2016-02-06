@@ -1,12 +1,13 @@
 Network:
-1) Everyone - Prediction:
+
+( 1) Everyone - Prediction:
 
 "When we send input-packet to server we could add timestamp on it to be later added on server's coordinate/angle-packet for client. 
 Then we could have a list on client side where we add the result of the prediction with that timestamp.
 
 Then later, when we receive coordinate/angle-packet from server, we could read the timestamp from the packet and use it to 
 find the correct prediction result from prediction results-list and check if the coordinates/angle match. 
-If not, then fix our car's current position."
+If not, then fix our car's current position." ) DONE I think
 
 2) Everyone - Winner detection (implementation details depend on whether we get prediction working or not)
 
