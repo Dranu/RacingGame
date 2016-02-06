@@ -104,14 +104,17 @@ class ServerThread extends Thread {
             }
         }
         else if (dataArray[0].equals("01")) { // Coordinate/angle packet
-            // Update server's game state (this section not needed until client predicition)
+            // Update server's game state
             int id = Integer.parseInt(dataArray[1]);
             Car c = carList.get(id);
-            c.setX(Double.parseDouble(dataArray[2]));
-            c.setY(Double.parseDouble(dataArray[3]));
-            c.setAngle(Double.parseDouble(dataArray[4]));
-            
-            // Send packet to all clients
+            //Set steering and throttle gotten from the client
+            c.setSteering(Integer.parseInt(dataArray[2]));
+            c.setThrottle(Integer.parseInt(dataArray[3]));
+            //Calculate the position of the car
+            c.move(-5,-5); //With -5,-5 values the move-function uses car's own throttle and steering
+            data = "01:" + Integer.toString(c.getID()) + ":" + Integer.toString(c.getX()) 
+                    + ":" + Integer.toString(c.getY()) + ":" + Double.toString(c.getAngle()) + ":" + dataArray[7];
+            // Send the calculated position to all clients
             response = data;
             sendbuffer = response.getBytes();
             int i = 0;

@@ -11,9 +11,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
@@ -28,6 +26,9 @@ public class GameSurface extends JPanel implements Runnable {
     public static BufferedImage track;
     public static Map<Integer,Car> carList = new HashMap();
     public static Object ready = new Object(); // flag for thread communication
+    private long millis;
+    private Prediction predict;
+
     
     GameSurface() {
         int id = -1;
@@ -39,6 +40,7 @@ public class GameSurface extends JPanel implements Runnable {
         if (id != -1) {
             initObjects(id);
         }
+        predict = new Prediction(); //We initialize a prediction object for this gamesurface / car
         initWindow();
     }
     
@@ -69,28 +71,47 @@ public class GameSurface extends JPanel implements Runnable {
         /*
             Client prediction:
             1) Get user input (steering, throttle)
-            2) Create and send input-packet to server
-            3) Do the prediction in client side (calculate coordinates/angle)
+            2) Do the prediction in client side (calculate coordinates/angle)
+            3) Create and send input and coordinate -packet to server
             4) Render predicted car position
+                4-1) Add the inputs and calculated position to the prediction list
             5) Receive real position from server
-            6) Compare to current position
+            6) Compare to calculated position
             7) Fix position if needed
-        */
-        
+                7-1) Set correct coordinates from the server to that point in the past
+                7-2) Iterate through inputs and recalculate current position
+        */   
         while (true) {
             
-            // 1) Get coordinates and angle
+            // 1) Get inputs
             int my_id = car.getID();
+            int steer = car.getSteering();
+            int throttle = car.getThrottle();
+            //2) Do the prediction in client side (calculate coordinates/angle)
+            car.move(-5,-5);
             int x = car.getX();
             int y = car.getY();
             double a = car.getAngle();
-
-            // 2) Create and send coordinate/angle packet to server
+            
+            millis = System.currentTimeMillis(); //Get a timestamp
+            car.setTimestamp(millis);
+            //4-1) Add the inputs and calculated position to the prediction list
+            predict.addHashInput(millis, (Double.toString(a)
+                    + ":" + Integer.toString(x)
+                    + ":" + Integer.toString(y) 
+                    + ":" + Integer.toString(steer) 
+                    + ":" + Integer.toString(throttle)));
+            
+            // 3) Create and send input and coordinate -packet to server
             byte[] sendbuffer = new byte[256];
-            String data = "01:" + Integer.toString(my_id) + ":" + Integer.toString(x) 
-                    + ":" + Integer.toString(y) + ":" + Double.toString(a);
+            String data = "01:" + Integer.toString(my_id) + ":" + Integer.toString(steer) 
+                    + ":" + Integer.toString(throttle) + ":" + Double.toString(a)+ ":" 
+                    + Integer.toString(x)+ ":" + Integer.toString(y) + ":" +Long.toString(millis);
             sendbuffer = data.getBytes();
             DatagramPacket packet = new DatagramPacket(sendbuffer, sendbuffer.length, address, 7777);
+            
+            Random randomGenerator = new Random();
+
             try {
                 socket.send(packet);
             } catch (IOException e) {
@@ -98,10 +119,8 @@ public class GameSurface extends JPanel implements Runnable {
                 System.out.println("Lost connection to server.");
                 System.exit(0);
             }
-            
-            // 3) Move our car
-            car.move();
-            
+
+
             // 4) Render the scene
             repaint();
             
@@ -114,6 +133,101 @@ public class GameSurface extends JPanel implements Runnable {
         }
     }
     
+    @Override
+    public void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        render(g);
+    }
+    
+    private void render(Graphics g) {
+        Graphics2D g2d = (Graphics2D) g;
+        AffineTransform old = g2d.getTransform();
+        g2d.drawImage(track, 0, 0, null);
+        // Render our car
+        int x = car.getX();
+        int y = car.getY();
+        
+        int w = car.getImage().getWidth();
+        int h = car.getImage().getHeight();
+        double a = car.getAngle() + Math.PI/2;
+        g2d.rotate(a, x+w/2, y+h/2);
+        g2d.drawImage(car.getImage(), x, y, null);
+        g2d.setTransform(old); // reset old rotation
+        g2d.drawString("LAP " + car.getLap(),50,20); //Display the current lap
+        // Render cars in carList
+        // carList is also accessed by InputThread so we need to synchronize
+        
+        synchronized (carList) {
+            for (Car c : carList.values()) {
+                if (c.getID() != car.getID()) { // DO NOT RE-RENDER OUR CAR!
+                    x = c.getX();
+                    y = c.getY();
+                    w = c.getImage().getWidth();
+                    h = c.getImage().getHeight();
+                    a = c.getAngle() + Math.PI/2;
+                    g2d.rotate(a, x+w/2, y+h/2);
+                    g2d.drawImage(c.getImage(), x, y, null);
+                    g2d.setTransform(old); // reset old rotation
+                }
+                else 
+                { 
+                    //Iterate through hashmap to find the calculated result from client-side
+                    if(predict.iterate(c.getTimestamp()) == true){ //found the result
+                        String[] dataArray = predict.getInput(c.getTimestamp()).split(":"); //split the data
+                        
+                        //6) Compare to calculated position
+                        if((dataArray[0]+":"+dataArray[1]+":"+dataArray[2]).equals(c.getAngle()+":"+c.getX()+":"+c.getY())){
+                            //System.out.println("CALCULATION IS CORRECT!");
+                            predict.removeTime(c.getTimestamp());   //Because calculation is correct, we can remove previous inputs from the prediction list up to this point 
+                        } 
+                        else //7) Fix position if needed
+                        {
+                            //7-1) Set correct coordinates from the server to that point in the past
+                            car.setX(c.getX());
+                            car.setY(c.getY());
+                            car.setAngle(c.getAngle());
+                            //7-2) Iterate through inputs and recalculate current position
+                            long startTime = predict.getNextTime(c.getTimestamp()); //Get the next timestamp from the timestamp we just got
+                            while(startTime < car.getTimestamp()){
+                                dataArray = predict.getInput(startTime).split(":"); 
+                                //Recalculate the coords with the steering and throttle
+                                int steer = (Integer.parseInt(dataArray[3]));
+                                int throt = (Integer.parseInt(dataArray[4]));
+                                car.move(steer, throt);
+                                int newx = car.getX();
+                                int newy = car.getY();
+                                double newa = car.getAngle();
+                                
+                                //Add the new inputs to hash, replacing the old values
+                                predict.addHashInput(startTime,(Double.toString(newa)
+                                    + ":" + Integer.toString(newx)
+                                    + ":" + Integer.toString(newy) 
+                                    + ":" + dataArray[3] 
+                                    + ":" + dataArray[4]));
+                                    
+                                startTime = predict.getNextTime(startTime); //Get the next time to recalculate
+                            }                         
+                        }
+                    } //else {System.out.println(c.getTimestamp());} //Should never reach this            
+                }
+            }
+        }
+        Toolkit.getDefaultToolkit().sync();
+    }
+    
+    private class TAdapter extends KeyAdapter {
+        
+        @Override
+        public void keyReleased(KeyEvent e) {
+            car.keyReleased(e);
+        }
+        
+        @Override
+        public void keyPressed(KeyEvent e) {
+            car.keyPressed(e);
+        }
+    }
+    // <editor-fold defaultstate="collapsed" desc="Initialize-methods">
     private int initNetworking() throws IOException {
         // For localhost testing we have to bind the socket to random port
         // If clients were on separate computers, we could use same port for each
@@ -174,60 +288,12 @@ public class GameSurface extends JPanel implements Runnable {
         
         car = new Car(track, id); // create our car
     }
-    
-    @Override
-    public void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        render(g);
-    }
-    
-    private void render(Graphics g) {
-        Graphics2D g2d = (Graphics2D) g;
-        AffineTransform old = g2d.getTransform();
-        g2d.drawImage(track, 0, 0, null);
-        // Render our car
-        int x = car.getX();
-        int y = car.getY();
-        int w = car.getImage().getWidth();
-        int h = car.getImage().getHeight();
-        double a = car.getAngle() + Math.PI/2;
-        g2d.rotate(a, x+w/2, y+h/2);
-        g2d.drawImage(car.getImage(), x, y, null);
-        g2d.setTransform(old); // reset old rotation
-        g2d.drawString("LAP " + car.getLap(),50,20); //Display the current lap
-        // Render cars in carList
-        // carList is also accessed by InputThread so we need to synchronize
-        synchronized (carList) {
-            for (Car c : carList.values()) {
-                if (c.getID() != car.getID()) { // DO NOT RE-RENDER OUR CAR!
-                    x = c.getX();
-                    y = c.getY();
-                    w = c.getImage().getWidth();
-                    h = c.getImage().getHeight();
-                    a = c.getAngle() + Math.PI/2;
-                    g2d.rotate(a, x+w/2, y+h/2);
-                    g2d.drawImage(c.getImage(), x, y, null);
-                    g2d.setTransform(old); // reset old rotation
-                }
-            }
-        }
-        Toolkit.getDefaultToolkit().sync();
-    }
-    
-    private class TAdapter extends KeyAdapter {
-        
-        @Override
-        public void keyReleased(KeyEvent e) {
-            car.keyReleased(e);
-        }
-        
-        @Override
-        public void keyPressed(KeyEvent e) {
-            car.keyPressed(e);
-        }
-    }
-    
+    //</editor-fold>   
 }
+
+
+
+// <editor-fold defaultstate="collapsed" desc="Input thread"> 
 
 class InputThread extends Thread {
     
@@ -249,6 +315,7 @@ class InputThread extends Thread {
                 data = new String(packet.getData(), 0, packet.getLength());
                 //System.out.println(data);
                 String[] dataArray = data.split(":");
+                //5) Receive real position from server
                 if (dataArray[0].equals("01")) { // coordinate/angle packet
                     synchronized(GameSurface.carList) {
                         int playerid = Integer.parseInt(dataArray[1]);
@@ -259,13 +326,16 @@ class InputThread extends Thread {
                             GameSurface.carList.put(playerid, c);
                         }
                         // set new variable values for that player
-                        c.setX(Double.parseDouble(dataArray[2]));
-                        c.setY(Double.parseDouble(dataArray[3]));
+                        c.setX(Integer.parseInt(dataArray[2]));
+                        c.setY(Integer.parseInt(dataArray[3]));
                         c.setAngle(Double.parseDouble(dataArray[4]));
+                        c.setTimestamp(Long.parseLong(dataArray[5]));
                     }
                 }
                 else if (dataArray[0].equals("02")) { // chat message packet
+                    dataArray = data.split(":", 3);
                     int senderID = Integer.parseInt(dataArray[1])+1;
+                    //Print even if there are ":" in the middle
                     System.out.println("Player " + senderID + ": " + dataArray[2]);
                 }
                 else if (dataArray[0].equals("03")) { // start game packet
@@ -283,6 +353,10 @@ class InputThread extends Thread {
         }
     }
 }
+
+//</editor-fold>
+
+// <editor-fold defaultstate="collapsed" desc="Chat thread">
 
 class ChatThread extends Thread {
     
@@ -305,15 +379,19 @@ class ChatThread extends Thread {
         while (true) {
             String msg = sc.nextLine();
             // check message length?
-            String data = "02:" + playerid + ":" + msg;
-            sendbuffer = data.getBytes();
-            DatagramPacket packet = new DatagramPacket(sendbuffer, sendbuffer.length, address, 7777);
-            try {
-                socket.send(packet);
-            } catch (IOException ex) {
-                //ex.printStackTrace();
-                System.out.println("Chat has been terminated.");
+            if(msg.length()>0){
+                String data = "02:" + playerid + ":" + msg;
+                sendbuffer = data.getBytes();
+                DatagramPacket packet = new DatagramPacket(sendbuffer, sendbuffer.length, address, 7777);
+                try {
+                    socket.send(packet);
+                } catch (IOException ex) {
+                    //ex.printStackTrace();
+                    System.out.println("Chat has been terminated.");
+                }
             }
         }
     }
 }
+
+//</editor-fold>

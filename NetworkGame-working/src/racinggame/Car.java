@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.Set;
 
 import javax.imageio.ImageIO;
+import static jdk.nashorn.internal.objects.NativeMath.round;
 
 public class Car {
     
@@ -24,6 +26,9 @@ public class Car {
     private double angDrag; // how fast the car stops spinning
     private double power; // how fast car can accelerate
     private double turnSpeed; // how fast to turn
+    private long timestamp;
+    
+    
     
     private int throttle; // 1 = forward , 0 = off, -1 = reverse
     private int steering; // 1 = right, 0 = center, -1 = left
@@ -50,7 +55,7 @@ public class Car {
         }
         
         // Set parameters
-        int[][] startcoords = {{22,259},{44,259},{22,286},{44,286}};
+        double[][] startcoords = {{22.00,259.00},{44.00,259.00},{22.00,286.00},{44.00,286.00}};
         this.x = startcoords[id][0];
         this.y = startcoords[id][1];
         
@@ -81,21 +86,25 @@ public class Car {
         this.checkpoint = 0;
     }
     
-    public void move() {
-        
-        if (throttle != 0) {
-            if (throttle == 1) { // forward
+    //Changed the move method to handle outside inputs for the prediction
+    public void move(int steer, int throt) {
+        if ((steer == -5) || (throt == -5)){
+            steer = this.steering;
+            throt = this.throttle;
+        }
+        if (throt != 0) {
+            if (throt == 1) { // forward
                 vx += Math.cos(angle)*power;
                 vy += Math.sin(angle)*power;
             }
-            if (throttle == -1) { // reverse
+            if (throt == -1) { // reverse
                 vx -= Math.cos(angle)*power*0.5;
                 vy -= Math.sin(angle)*power*0.5;
             }
-            if (steering == -1) { // left
+            if (steer == -1) { // left
                 angVel -= turnSpeed;
             }
-            if (steering == 1) { // right
+            if (steer == 1) { // right
                 angVel += turnSpeed;
             }
         }
@@ -184,13 +193,13 @@ public class Car {
         if(checkpoint == 9){ //Last checkpoint cleared, next should be finishline
             if ( corners.contains(checkpointList.get(0).getRGB() )){
                 checkpoint = 0;
-                System.out.println(checkpoint + ". Checkpoint: " + checkpointList.get(checkpoint).getRGB());
+                //System.out.println(checkpoint + ". Checkpoint: " + checkpointList.get(checkpoint).getRGB());
                 lap++;
             }
         }
         else if ( corners.contains(checkpointList.get(checkpoint + 1).getRGB()) ) {
             checkpoint++;
-            System.out.println(checkpoint + ". Checkpoint: " + checkpointList.get(checkpoint).getRGB());
+            //System.out.println(checkpoint + ". Checkpoint: " + checkpointList.get(checkpoint).getRGB());
         }
         
         if (corners.contains(field)) {//(luc==field || ruc==field || llc==field || rlc==field ){
@@ -206,34 +215,16 @@ public class Car {
         }
     }
     
-    public int getLap(){
-        return lap;
+    // <editor-fold defaultstate="collapsed" desc="Set-methods">
+    public void setSteering(int s){
+        steering = s;    
     }
     
-    public int[] getCorner(int X, int Y, int CX, int CY, double Angle) {
-        
-        int[] coords = new int[2];
-        
-        double RX = (X-CX)*Math.cos(Angle)-(Y-CY)*Math.sin(Angle);
-        double RY = (X-CX)*Math.sin(Angle)+(Y-CY)*Math.cos(Angle);
-        
-        coords[0] = (int)Math.floor(RX + CX);
-        coords[1] = (int)Math.floor(RY + CY);
-        
-        return coords;
+    public void setThrottle(int t){
+        throttle = t;    
     }
-    
-    public int getID() {
-        return id;
-    }
-    
-    public int getX() {
-        return (int)Math.floor(x);
-    }
-    
-    public int getY() {
-        return (int)Math.floor(y);
-    }
+
+    public void setTimestamp(long t){timestamp = t;}
     
     public void setID(int id) {
         this.id = id;
@@ -250,16 +241,56 @@ public class Car {
     public void setAngle(double a) {
         this.angle = a;
     }
+    // </editor-fold>
+    // <editor-fold defaultstate="collapsed" desc="Get-methods">
+    public int[] getCorner(int X, int Y, int CX, int CY, double Angle) {
+        
+        int[] coords = new int[2];
+        
+        double RX = (X-CX)*Math.cos(Angle)-(Y-CY)*Math.sin(Angle);
+        double RY = (X-CX)*Math.sin(Angle)+(Y-CY)*Math.cos(Angle);
+        
+        coords[0] = (int)Math.floor(RX + CX);
+        coords[1] = (int)Math.floor(RY + CY);
+        
+        return coords;
+    }
+    
+    
+    public int getID() {
+        return id;
+    }
+    
+    public int getX() {
+        return (int)Math.floor(x);
+    }
+    
+    public int getY() {
+        return (int)Math.floor(y);
+    }
+    
+    public int getSteering(){
+        return steering;
+    }
+    
+    public int getThrottle(){
+        return throttle;
+    }
+    
+    public long getTimestamp(){return timestamp;}
+    public int getLap(){
+        return lap;
+    }
     
     public double getAngle() {
-        return angle;
+        return Math.round (angle * 10000.0) / 10000.0;  //Get angle with 5 decimals, otherwise too precise
     }
     
     public BufferedImage getImage() {
         return img;
     }
-    
-    public void keyPressed(KeyEvent e) {
+    // </editor-fold>
+        public void keyPressed(KeyEvent e) {
         
         int key = e.getKeyCode();
         
@@ -294,4 +325,7 @@ public class Car {
             throttle = 0;
         }
     }
+    
 }
+
+
