@@ -128,7 +128,7 @@ public class GameSurface extends JPanel implements Runnable {
             
             Random randomGenerator = new Random();
             int randomInt = randomGenerator.nextInt(100);
-            if(randomInt < 33){
+            //if(randomInt < 33){
             try {
                 socket.send(packet);
             } catch (IOException e) {
@@ -136,7 +136,7 @@ public class GameSurface extends JPanel implements Runnable {
                 System.out.println("Lost connection to server.");
                 System.exit(0);
             }
-            }
+            //}
 
             // 4) Render the scene
             repaint();
