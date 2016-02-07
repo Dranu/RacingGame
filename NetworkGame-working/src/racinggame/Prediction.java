@@ -54,7 +54,7 @@ public class Prediction {
         Set set = inputs.entrySet(); //make a set from the hashmap
         Iterator i = set.iterator(); //make an iterator for the set
         Map.Entry find = (Map.Entry)i.next(); //find the entry from the set
-        while ((long)find.getKey()< time){ //loop while the given timestamp is larger than found timestamp
+        while((long)find.getKey()< time){ //loop while the given timestamp is larger than found timestamp
             i.remove(); //remove the entry from the set
             find = (Map.Entry)i.next(); //get the next from the set
         }

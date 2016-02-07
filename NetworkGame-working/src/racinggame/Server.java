@@ -26,6 +26,17 @@ class ServerThread extends Thread {
         socket = new DatagramSocket(7777);
     }
     
+    
+    private void reset() {
+        addresses.clear();
+        ports.clear();
+        carList.clear();
+        idcounter = 0;
+        reset = true;
+    }
+    
+    
+    
     @Override
     public void run() {
         
@@ -117,7 +128,7 @@ class ServerThread extends Thread {
             c.move(-5,-5); //With -5,-5 values the move-function uses car's own throttle and steering
             if (c.getLap() == 2) {
                 data = "04:" + c.getID();
-                //reset();
+                //System.out.println("Game over, reset!");               
             }
             else {
                 data = "01:" + Integer.toString(c.getID()) + ":" + Integer.toString(c.getX()) 
@@ -132,6 +143,8 @@ class ServerThread extends Thread {
                 socket.send(packet);
                 i++;
             }
+            if (data.equals("04:" + c.getID()))
+                reset();
         }
         else if (dataArray[0].equals("02")) { // Chat message packet
             if (reset == true) { return; }
