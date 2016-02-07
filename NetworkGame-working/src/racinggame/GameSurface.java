@@ -1,7 +1,10 @@
 package racinggame;
 
+import java.awt.Color;
+import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.GridBagLayout;
 import java.awt.Toolkit;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
@@ -16,6 +19,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
 import javax.imageio.ImageIO;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 
 public class GameSurface extends JPanel implements Runnable {
@@ -32,8 +36,8 @@ public class GameSurface extends JPanel implements Runnable {
     private double newy = 0;
     private double newa = 0;
     
-    
-    public static boolean gameover = false;
+    private static int gameover = -1;
+    private JLabel winnerlabel;
     
     GameSurface() {
         int id = -1;
@@ -45,17 +49,17 @@ public class GameSurface extends JPanel implements Runnable {
         if (id != -1) {
             initObjects(id);
         }
-        predict = new Prediction(); //We initialize a prediction object for this gamesurface / car
+        predict = new Prediction(); // We initialize a prediction object for this gamesurface / car
         initWindow();
     }
     
- 
-    public static synchronized boolean getGameover() {
+    public static synchronized int getGameover() {
         return gameover;
     }
     
-    
-    
+    public static synchronized void setGameover(int winnerid) {
+        gameover = winnerid;
+    }
     
     public int getCarID() {
         return car.getID();
@@ -69,7 +73,7 @@ public class GameSurface extends JPanel implements Runnable {
         new ChatThread(socket, car.getID(), address).start();
         
         // wait if we are not the last person joined i.e. id = 3
-        if (car.getID() < 3) {
+        if (car.getID() < 1) {
             synchronized (ready) {
                 try {
                     ready.wait();
@@ -93,16 +97,28 @@ public class GameSurface extends JPanel implements Runnable {
             7) Fix position if needed
                 7-1) Set correct coordinates from the server to that point in the past
                 7-2) Iterate through inputs and recalculate current position
-        */   
+        */
+        
         while (true) {
-            if (getGameover() == true) {
-                System.out.println("Game over!");
+            
+            int winnerid = getGameover();
+            if (winnerid != -1) {
+                // Show winner message
+                if (winnerid == car.getID()) {
+                    winnerlabel.setText("You win!");
+                }
+                else {
+                    winnerid++;
+                    winnerlabel.setText("Player " + winnerid + " wins!");
+                }
                 break;
             }
+            
             // 1) Get inputs
             int my_id = car.getID();
             int steer = car.getSteering();
             int throttle = car.getThrottle();
+            
             //2) Do the prediction in client side (calculate coordinates/angle)
             car.move(-5,-5);
             int x = car.getX();
@@ -111,6 +127,7 @@ public class GameSurface extends JPanel implements Runnable {
             
             millis = System.currentTimeMillis(); //Get a timestamp
             car.setTimestamp(millis);
+            
             //4-1) Add the inputs and calculated position to the prediction list
             predict.addHashInput(millis, (Double.toString(a)
                     + ":" + Integer.toString(x)
@@ -128,7 +145,7 @@ public class GameSurface extends JPanel implements Runnable {
             
             Random randomGenerator = new Random();
             int randomInt = randomGenerator.nextInt(100);
-            //if(randomInt < 33){
+            //if(randomInt < 33){            
             try {
                 socket.send(packet);
             } catch (IOException e) {
@@ -147,7 +164,6 @@ public class GameSurface extends JPanel implements Runnable {
                 ex.printStackTrace();
             }   
         }
-        System.exit(0);
     }
     
     @Override
@@ -162,8 +178,7 @@ public class GameSurface extends JPanel implements Runnable {
         g2d.drawImage(track, 0, 0, null);
         // Render our car
         int x = car.getX();
-        int y = car.getY();
-        
+        int y = car.getY(); 
         int w = car.getImage().getWidth();
         int h = car.getImage().getHeight();
         double a = car.getAngle() + Math.PI/2;
@@ -171,9 +186,9 @@ public class GameSurface extends JPanel implements Runnable {
         g2d.drawImage(car.getImage(), x, y, null);
         g2d.setTransform(old); // reset old rotation
         g2d.drawString("LAP " + car.getLap(),50,20); //Display the current lap
+        
         // Render cars in carList
         // carList is also accessed by InputThread so we need to synchronize
-        
         synchronized (carList) {
             for (Car c : carList.values()) {
                 if (c.getID() != car.getID()) { // DO NOT RE-RENDER OUR CAR!
@@ -253,7 +268,6 @@ public class GameSurface extends JPanel implements Runnable {
         double power = 0.2;
         double turnSpeed = 0.0087;
 
-
         if (throt != 0) {
             if (throt == 1) { // forward
                 vx += Math.cos(angle)*power;
@@ -321,6 +335,7 @@ public class GameSurface extends JPanel implements Runnable {
             car.keyPressed(e);
         }
     }
+    
     // <editor-fold defaultstate="collapsed" desc="Initialize-methods">
     private int initNetworking() throws IOException {
         // For localhost testing we have to bind the socket to random port
@@ -330,7 +345,7 @@ public class GameSurface extends JPanel implements Runnable {
         System.out.println("Creating socket to listen to port " + port);
         socket = new DatagramSocket(port);
         byte[] sendbuffer = new byte[256];
-        address = InetAddress.getByName("80.221.247.156"); // Set host IP here
+        address = InetAddress.getByName("localhost"); // Set host IP here
         
         // Bind to specific host to detect socket state during send/receive
         socket.connect(address, 7777);
@@ -370,6 +385,14 @@ public class GameSurface extends JPanel implements Runnable {
     private void initWindow() {
         addKeyListener(new TAdapter());
         setFocusable(true);
+        setLayout(new GridBagLayout());
+        winnerlabel = new JLabel("");
+        winnerlabel.setHorizontalAlignment(JLabel.LEFT);
+        winnerlabel.setVerticalAlignment(JLabel.CENTER);
+        winnerlabel.setVerticalTextPosition(JLabel.CENTER);
+        winnerlabel.setFont(new Font(Font.DIALOG, Font.PLAIN, 40));
+        winnerlabel.setForeground(Color.white);
+        add(winnerlabel);
     }
     
     private void initObjects(int id) {
@@ -388,7 +411,6 @@ public class GameSurface extends JPanel implements Runnable {
 
 
 // <editor-fold defaultstate="collapsed" desc="Input thread"> 
-
 class InputThread extends Thread {
     
     private DatagramSocket socket;
@@ -439,8 +461,8 @@ class InputThread extends Thread {
                     }
                 }
                 else if (dataArray[0].equals("04")){
-                    //GameSurface.setGameover();
-                    GameSurface.gameover = true;
+                    GameSurface.setGameover(Integer.parseInt(dataArray[1]));
+                    //GameSurface.gameover = true;
                 }
                 // reset packet length
                 packet.setLength(receivebuffer.length);
@@ -452,11 +474,9 @@ class InputThread extends Thread {
         }
     }
 }
-
 //</editor-fold>
 
 // <editor-fold defaultstate="collapsed" desc="Chat thread">
-
 class ChatThread extends Thread {
     
     private DatagramSocket socket;
@@ -477,7 +497,6 @@ class ChatThread extends Thread {
     public void run() {
         while (true) {
             String msg = sc.nextLine();
-            // check message length?
             if(msg.length()>0){
                 String data = "02:" + playerid + ":" + msg;
                 sendbuffer = data.getBytes();
@@ -487,10 +506,10 @@ class ChatThread extends Thread {
                 } catch (IOException ex) {
                     //ex.printStackTrace();
                     System.out.println("Chat has been terminated.");
+                    System.exit(0);
                 }
             }
         }
     }
 }
-
 //</editor-fold>

@@ -28,8 +28,6 @@ public class Car {
     private double turnSpeed; // how fast to turn
     private long timestamp;
     
-    
-    
     private int throttle; // 1 = forward , 0 = off, -1 = reverse
     private int steering; // 1 = right, 0 = center, -1 = left
     
@@ -242,6 +240,7 @@ public class Car {
         this.angle = a;
     }
     // </editor-fold>
+    
     // <editor-fold defaultstate="collapsed" desc="Get-methods">
     public int[] getCorner(int X, int Y, int CX, int CY, double Angle) {
         
@@ -255,7 +254,6 @@ public class Car {
         
         return coords;
     }
-    
     
     public int getID() {
         return id;
@@ -290,6 +288,7 @@ public class Car {
         return img;
     }
     // </editor-fold>
+    
         public void keyPressed(KeyEvent e) {
         
         int key = e.getKeyCode();

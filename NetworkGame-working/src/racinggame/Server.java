@@ -19,6 +19,7 @@ class ServerThread extends Thread {
     protected List<Integer> ports = new ArrayList();
     private int idcounter;
     private List<Car> carList = new ArrayList();
+    private boolean reset = false;
     
     public ServerThread() throws IOException {
         // Create UDP socket to listen to port 7777
@@ -57,6 +58,7 @@ class ServerThread extends Thread {
         String response;
         
         if (dataArray[0].equals("00")) { // Login packet
+            if (reset == true) { reset = false; }
             if (idcounter == 4) { // max 4 players
                 response = "00:-1";
                 sendbuffer = response.getBytes();
@@ -86,7 +88,7 @@ class ServerThread extends Thread {
             socket.send(packet);
             
             // If we have 4 players --> send start message to players
-            if (idcounter == 4) {
+            if (idcounter == 2) {
                 response = "03:start";
                 sendbuffer = response.getBytes();
                 int i = 0;
@@ -104,6 +106,7 @@ class ServerThread extends Thread {
             }
         }
         else if (dataArray[0].equals("01")) { // Coordinate/angle packet
+            if (reset == true) { return; }
             // Update server's game state
             int id = Integer.parseInt(dataArray[1]);
             Car c = carList.get(id);
@@ -112,9 +115,11 @@ class ServerThread extends Thread {
             c.setThrottle(Integer.parseInt(dataArray[3]));
             //Calculate the position of the car
             c.move(-5,-5); //With -5,-5 values the move-function uses car's own throttle and steering
-            if (c.getLap() == 2)
-                data= "04:"+c.getID();
-            else{
+            if (c.getLap() == 2) {
+                data = "04:" + c.getID();
+                //reset();
+            }
+            else {
                 data = "01:" + Integer.toString(c.getID()) + ":" + Integer.toString(c.getX()) 
                     + ":" + Integer.toString(c.getY()) + ":" + Double.toString(c.getAngle()) + ":" + dataArray[7];
                 // Send the calculated position to all clients
@@ -129,6 +134,7 @@ class ServerThread extends Thread {
             }
         }
         else if (dataArray[0].equals("02")) { // Chat message packet
+            if (reset == true) { return; }
             response = data;
             sendbuffer = response.getBytes();
             int i = 0;

@@ -1,6 +1,7 @@
 package racinggame;
 
 import java.awt.EventQueue;
+import java.awt.FlowLayout;
 import javax.swing.JFrame;
 
 public class RacingGame extends JFrame {
@@ -33,7 +34,7 @@ public class RacingGame extends JFrame {
             public void run() {
                 RacingGame rg = new RacingGame();
                 // wait if we are not the last person joined i.e. id = 3
-                if (rg.getPlayerID() < 3) {
+                if (rg.getPlayerID() < 1) {
                     synchronized (GameSurface.ready) {
                         try {
                             GameSurface.ready.wait();

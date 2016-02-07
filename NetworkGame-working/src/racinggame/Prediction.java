@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package racinggame;
 
 import java.util.Iterator;
@@ -10,13 +5,9 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-/**
- *
- * @author Jiri
- */
 public class Prediction {
-    LinkedHashMap inputs;
     
+    LinkedHashMap inputs;
     
     public Prediction(){
         this.inputs = new LinkedHashMap();
@@ -39,7 +30,6 @@ public class Prediction {
     public String getInput(long time){  
         return (String)inputs.get(time);
     }
-
     
     //Get the next timestamp from the hashmap to find the next data
     public long getNextTime(long time){
